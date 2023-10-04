@@ -6,14 +6,16 @@ require("./database/conn.js");
 const Login = require("./models/login");
 const jwt = require("jsonwebtoken");
 
-const jwtSecret = process.env.JWT_SECRET;
+//const jwtSecret = process.env.JWT_SECRET;
+const jwtSecret = "FBHWERBFUHEWRBFHWEURFE";
 
-const AuthRoute = (req, res, next) => {
+function auth(req, res, next) {
     const authToken = req.headers["authorization"];
-
+    console.log(`Seu Token: ${authToken}`);
     if (authToken != undefined) {
         const BearerToken = authToken.split(" ");
         const token = BearerToken[1];
+        console.log("Token extraído:", token);
         jwt.verify(token, jwtSecret, (error, data) => {
             if (error) {
                 res.status(401).json({
@@ -29,16 +31,18 @@ const AuthRoute = (req, res, next) => {
     } else {
         res.status(401).json({ error: "Token Inválido" });
     }
-};
+}
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.get("/", AuthRoute, (req, res) => {
-    res.render("Home");
+app.get("/", auth, (req, res) => {
+    const token = req.token;
+    res.render("Home", { token });
 });
+
 app.get("/register", (req, res) => {
     res.render("Register");
 });
@@ -76,6 +80,7 @@ app.post("/register/save", async (req, res) => {
     }
 });
 app.get("/login", (req, res) => {
+    console.log(req.userLogger);
     res.render("Login");
 });
 app.post("/login/save", async (req, res) => {
@@ -87,21 +92,28 @@ app.post("/login/save", async (req, res) => {
         const passwordMatch = bcrypt.compareSync(password, hash);
 
         if (passwordMatch) {
-            console.log("Login feito com sucesso!");
-            res.status(200);
-            res.redirect("/");
+            jwt.sign(
+                { id: user.id, email: user.email },
+                jwtSecret,
+                { expiresIn: "48h" },
+                (error, token) => {
+                    if (error) {
+                        res.status(400).json({ error: "Falha Interna" });
+                    } else {
+                        res.status(200).json({ token: token });
+                    }
+                },
+            );
         } else {
             console.log("Senha incorreta. Não foi possível fazer Login");
             res.status(401);
-            res.redirect("/login");
         }
     } else {
         console.log("Email não encontrado. Não foi possível fazer Login");
         res.status(401);
-        res.redirect("/login");
     }
 });
-app.post("/auth", async (req, res) => {
+/*app.post("/auth", async (req, res) => {
     let { email, password } = req.body;
     if (email != undefined) {
         let user = await Login.findOne({
@@ -136,12 +148,11 @@ app.post("/auth", async (req, res) => {
     } else {
         res.status(403).json({ error: "Email enviado é Inválido!" });
     }
-});
+});*/
 app.get("*", (__, res) => {
     res.status(404);
     res.send("Página Vázia");
 });
-app.post("/login/save", async (req, res) => {});
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

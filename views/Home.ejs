@@ -7,8 +7,26 @@
         <link rel="stylesheet" href="/css/style.css" />
     </head>
     <body>
-        <h1>Home</h1>
-        <a  href="/login">Login</a>
-        <a  href="/register">Register</a>
+        <% if (token) { %>
+            <h2>Seu token <%= token %></h2>
+        <% } else { %>
+            <h1>Não tem token</h1>
+        <% } %>
     </body>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+    var axiosConfig = {
+    headers: {
+        Authorization: "Bearer " + localStorage.getItem("Token")
+    }
+};
+    axios.get('http://localhost:8080/',axiosConfig)
+        .then(res=>{
+            const token = res.data.token;
+            console.log(token);
+            localStorage.setItem("Token", token)
+        })
+        .catch(error=>console.error(error));
+    </script>
+     
 </html>
